@@ -3,14 +3,21 @@ const API_BASE = '';
 async function apiFetch(url, options = {}) {
     let token = localStorage.getItem('accessToken');
 
-    // 기본 헤더 설정
+    // 1. 기본 헤더 구성 (Content-Type은 일단 제외)
+    const headers = {
+        'Authorization': `Bearer ${token}`,
+        ...options.headers,
+    };
+
+    // 2. 핵심 수정: body가 FormData가 아닐 때만 JSON 헤더 추가
+    if (options.body && !(options.body instanceof FormData)) {
+        headers['Content-Type'] = 'application/json';
+    }
+    // body가 없거나 FormData인 경우 Content-Type을 설정하지 않음 (브라우저가 자동 설정)
+
     const fetchOptions = {
         ...options,
-        headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-            ...options.headers,
-        }
+        headers: headers
     };
 
     let res = await fetch(`${API_BASE}${url}`, fetchOptions);
