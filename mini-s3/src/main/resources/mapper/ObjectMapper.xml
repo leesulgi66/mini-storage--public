@@ -1,0 +1,77 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ministorage.mini_s3.mapper.ObjectMapper">
+
+    <resultMap id="objectResultMap" type="com.ministorage.mini_s3.domain.StorageObject">
+        <id     property="id"          column="id"/>
+        <result property="bucket"      column="bucket"/>
+        <result property="key"         column="key"/>
+        <result property="etag"        column="etag"/>
+        <result property="size"        column="size"/>
+        <result property="contentType" column="content_type"/>
+        <result property="acl"         column="acl"/>
+        <result property="createdAt"   column="created_at"/>
+        <result property="updatedAt"   column="updated_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.ministorage.mini_s3.domain.StorageObject">
+        INSERT INTO objects (id, bucket, key, etag, size, content_type, acl)
+        VALUES (
+                   gen_random_uuid(),
+                   #{bucket},
+                   #{key},
+                   #{etag},
+                   #{size},
+                   #{contentType},
+                   #{acl}
+               )
+            ON CONFLICT (bucket, key) DO UPDATE
+                                             SET etag         = EXCLUDED.etag,
+                                             size         = EXCLUDED.size,
+                                             content_type = EXCLUDED.content_type,
+                                             acl          = EXCLUDED.acl,
+                                             updated_at   = now()
+    </insert>
+
+    <select id="findByBucketAndKey" resultMap="objectResultMap">
+        SELECT id, bucket, key, etag, size, content_type, acl, created_at, updated_at
+        FROM objects
+        WHERE bucket = #{bucket}
+          AND key    = #{key}
+    </select>
+
+    <select id="findByBucketWithPrefix" resultMap="objectResultMap">
+        SELECT id, bucket, key, etag, size, content_type, acl, created_at, updated_at
+        FROM objects
+        WHERE bucket = #{bucket}
+        <if test="prefix != null and prefix != ''">
+            AND key LIKE #{prefix} || '%'
+        </if>
+        <if test="cursor != null and cursor != ''">
+            AND key > #{cursor}
+        </if>
+        ORDER BY key
+        LIMIT #{limit}
+    </select>
+
+    <select id="countByBucket" resultType="long">
+        SELECT COUNT(*) FROM objects WHERE bucket = #{bucket}
+    </select>
+
+    <select id="sumSizeByBucket" resultType="long">
+        SELECT COALESCE(SUM(size), 0) FROM objects WHERE bucket = #{bucket}
+    </select>
+
+    <delete id="deleteByBucketAndKey">
+        DELETE FROM objects
+        WHERE bucket = #{bucket}
+          AND key    = #{key}
+    </delete>
+
+    <select id="findDistinctBuckets" resultType="string">
+        SELECT DISTINCT bucket FROM objects ORDER BY bucket
+    </select>
+
+</mapper>

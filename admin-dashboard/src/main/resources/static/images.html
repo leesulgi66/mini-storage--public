@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>이미지 관리 - mini-storage admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <script src="/js/auth.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', sans-serif; background: #f5f5f3; display: flex; min-height: 100vh; }
+
+        .sidebar { width: 220px; background: #fff; border-right: 1px solid #e8e8e6; padding: 1.5rem 1rem; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; }
+        .sidebar-logo { display: flex; align-items: center; gap: 8px; padding: 0 0.5rem; margin-bottom: 2rem; }
+        .logo-icon { width: 30px; height: 30px; background: #111; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .logo-icon svg { width: 15px; height: 15px; }
+        .logo-text { font-size: 14px; font-weight: 500; color: #111; letter-spacing: -0.3px; }
+        .logo-sub { font-size: 11px; color: #999; }
+        .nav-label { font-size: 11px; color: #bbb; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 0.5rem; margin-bottom: 0.5rem; }
+        .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 7px; font-size: 14px; color: #555; cursor: pointer; margin-bottom: 2px; text-decoration: none; }
+        .nav-item:hover { background: #f5f5f3; }
+        .nav-item.active { background: #111; color: #fff; }
+        .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .nav-spacer { flex: 1; }
+        .nav-user { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+        .avatar { width: 28px; height: 28px; background: #e8e8e6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #555; flex-shrink: 0; }
+        .user-name { font-size: 13px; font-weight: 500; color: #111; }
+        .user-role { font-size: 11px; color: #999; }
+        .logout-btn { width: 100%; margin-top: 0.5rem; padding: 8px 10px; font-size: 13px; color: #999; background: none; border: none; cursor: pointer; text-align: left; font-family: inherit; border-radius: 7px; }
+        .logout-btn:hover { background: #f5f5f3; color: #555; }
+
+        .main { margin-left: 220px; flex: 1; padding: 2rem; }
+        .page-header { display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.75rem; }
+        .page-header h1 { font-size: 20px; font-weight: 500; color: #111; letter-spacing: -0.4px; }
+        .page-header p { font-size: 13px; color: #999; margin-top: 3px; }
+        .btn-primary { padding: 9px 18px; font-size: 13px; font-weight: 500; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; text-decoration: none; display: inline-block; }
+        .btn-primary:hover { background: #333; }
+
+        .bucket-tabs-wrap { display: flex; align-items: center; gap: 12px; margin-bottom: 1.25rem; }
+        .bucket-tabs-label { font-size: 12px; color: #999; font-weight: 500; letter-spacing: 0.3px; flex-shrink: 0; }
+        .bucket-tabs { display: flex; gap: 6px; margin-bottom: 0; }
+        .bucket-tab { padding: 7px 16px; font-size: 13px; border: 1px solid #e0e0de; border-radius: 7px; background: #fff; color: #555; cursor: pointer; font-family: inherit; }
+        .bucket-tab.active { background: #111; color: #fff; border-color: #111; }
+
+        .filter-bar { display: flex; align-items: center; gap: 10px; margin-bottom: 1.25rem; }
+        .search-wrap { position: relative; flex: 1; max-width: 280px; }
+        .search-wrap svg { position: absolute; left: 10px; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; }
+        .search-input { width: 100%; padding: 8px 10px 8px 32px; font-size: 13px; border: 1px solid #e0e0de; border-radius: 7px; font-family: inherit; color: #111; background: #fff; outline: none; }
+        .search-input:focus { border-color: #999; }
+        .view-toggle { display: flex; border: 1px solid #e0e0de; border-radius: 7px; overflow: hidden; }
+        .view-btn { padding: 7px 10px; background: #fff; border: none; cursor: pointer; display: flex; align-items: center; }
+        .view-btn.active { background: #111; }
+        .view-btn.active svg { stroke: #fff; }
+        .view-btn svg { width: 15px; height: 15px; stroke: #888; }
+        .count-text { font-size: 13px; color: #999; margin-left: auto; }
+
+        .image-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+        .image-card { border: 1px solid #e8e8e6; border-radius: 8px; overflow: hidden; background: #fff; cursor: pointer; }
+        .image-card:hover { border-color: #bbb; }
+        .image-card:hover .card-actions { opacity: 1; }
+        .thumb-wrap { position: relative; height: 100px; background: #f0f0ee; overflow: hidden; }
+        .thumb-wrap img { width: 100%; height: 100%; object-fit: cover; }
+        .thumb-placeholder { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; }
+        .card-actions { position: absolute; inset: 0; background: rgba(0,0,0,0.4); display: flex; align-items: center; justify-content: center; gap: 8px; opacity: 0; transition: opacity 0.15s; }
+        .action-btn { width: 30px; height: 30px; border-radius: 6px; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+        .action-btn.view-btn-action { background: #fff; }
+        .action-btn.delete-btn-action { background: #fcebeb; }
+        .action-btn svg { width: 14px; height: 14px; }
+        .card-info { padding: 8px 10px; }
+        .card-name { font-size: 12px; color: #333; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .card-meta { font-size: 11px; color: #bbb; margin-top: 2px; display: flex; justify-content: space-between; align-items: center; }
+        .badge { display: inline-block; font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #f0f0ee; color: #888; }
+
+        .image-list { display: none; flex-direction: column; gap: 6px; }
+        .list-item { display: flex; align-items: center; gap: 12px; padding: 10px 14px; background: #fff; border: 1px solid #e8e8e6; border-radius: 8px; }
+        .list-item:hover { border-color: #bbb; }
+        .list-thumb { width: 44px; height: 44px; border-radius: 6px; overflow: hidden; background: #f0f0ee; flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+        .list-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .list-name { font-size: 13px; font-weight: 500; color: #111; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .list-size { font-size: 12px; color: #999; flex-shrink: 0; }
+        .list-date { font-size: 12px; color: #bbb; flex-shrink: 0; width: 140px; text-align: right; }
+        .list-actions { display: flex; gap: 6px; flex-shrink: 0; }
+        .list-action-btn { padding: 5px 10px; font-size: 12px; border: 1px solid #e0e0de; border-radius: 6px; background: #fff; cursor: pointer; font-family: inherit; color: #555; }
+        .list-action-btn.del { border-color: #f7c1c1; color: #a32d2d; }
+        .list-action-btn:hover { background: #f5f5f3; }
+        .list-action-btn.del:hover { background: #fcebeb; }
+
+        .pagination { display: flex; justify-content: center; gap: 6px; margin-top: 1.5rem; }
+        .page-btn { padding: 6px 12px; font-size: 13px; border: 1px solid #e0e0de; border-radius: 6px; background: #fff; color: #555; cursor: pointer; font-family: inherit; }
+        .page-btn.active { background: #111; color: #fff; border-color: #111; }
+        .page-btn:hover:not(.active) { background: #f5f5f3; }
+        .page-btn:disabled { color: #ccc; cursor: not-allowed; }
+
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 100; }
+        .modal-overlay.open { display: flex; }
+        .modal { background: #fff; border-radius: 12px; padding: 1.5rem; width: 520px; max-width: 90vw; max-height: 90vh; overflow-y: auto; }
+        .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem; gap: 10px; }
+        .modal-title { font-size: 15px; font-weight: 500; color: #111; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; }
+        .modal-close { flex-shrink: 0; width: 28px; height: 28px; border: none; background: #f0f0ee; border-radius: 6px; cursor: pointer; font-size: 16px; color: #555; display: flex; align-items: center; justify-content: center; }
+        .modal-img-wrap { width: 100%; height: 220px; background: #f0f0ee; border-radius: 8px; overflow: hidden; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: center; }
+        .modal-img-wrap img { max-width: 100%; max-height: 100%; object-fit: contain; }
+        .meta-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 1.25rem; }
+        .meta-item { padding: 10px 12px; background: #f5f5f3; border-radius: 7px; }
+        .meta-label { font-size: 11px; color: #999; margin-bottom: 3px; }
+        .meta-value { font-size: 13px; color: #111; font-weight: 500; word-break: break-all; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid #f0f0ee; }
+        .btn-cancel { padding: 8px 16px; font-size: 13px; border: 1px solid #e0e0de; border-radius: 7px; background: #fff; color: #555; cursor: pointer; font-family: inherit; }
+        .btn-delete { padding: 8px 16px; font-size: 13px; border: 1px solid #f7c1c1; border-radius: 7px; background: #fff; color: #a32d2d; cursor: pointer; font-family: inherit; }
+        .btn-delete:hover { background: #fcebeb; }
+
+        .confirm-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.4); display: none; align-items: center; justify-content: center; z-index: 200; }
+        .confirm-overlay.open { display: flex; }
+        .confirm-box { background: #fff; border-radius: 12px; padding: 1.5rem; width: 340px; }
+        .confirm-title { font-size: 15px; font-weight: 500; color: #111; margin-bottom: 0.5rem; }
+        .confirm-msg { font-size: 13px; color: #666; margin-bottom: 1.5rem; line-height: 1.6; }
+        .confirm-actions { display: flex; gap: 8px; justify-content: flex-end; }
+
+        .loading { text-align: center; padding: 4rem; color: #bbb; font-size: 14px; }
+        .empty { text-align: center; padding: 4rem; color: #bbb; font-size: 14px; }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">
+            <svg viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" fill="white"/><rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.5"/><rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.5"/><rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.3"/></svg>
+        </div>
+        <div>
+            <div class="logo-text">mini-storage</div>
+            <div class="logo-sub">admin console</div>
+        </div>
+    </div>
+    <div class="nav-label">메뉴</div>
+    <a href="/dashboard.html" class="nav-item">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        대시보드
+    </a>
+    <a href="/logs.html" class="nav-item">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+        접속 로그
+    </a>
+    <a href="/images.html" class="nav-item active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><circle cx="5.5" cy="7.5" r="1.5"/><path d="M15 11l-4-4-6 6"/></svg>
+        이미지 관리
+    </a>
+    <a href="/upload.html" class="nav-item">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M2 13h12"/></svg>
+        업로드
+    </a>
+    <div class="nav-spacer"></div>
+    <div class="nav-user">
+        <div class="avatar" id="user-avatar">AD</div>
+        <div>
+            <div class="user-name" id="user-name">-</div>
+            <div class="user-role">관리자</div>
+        </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">로그아웃</button>
+</div>
+
+<div class="main">
+    <div class="page-header">
+        <div>
+            <h1>이미지 관리</h1>
+            <p>업로드된 이미지를 조회하고 관리하세요</p>
+        </div>
+        <a href="/upload.html" class="btn-primary">+ 업로드</a>
+    </div>
+
+    <div class="bucket-tabs-wrap">
+        <span class="bucket-tabs-label">Bucket :</span>
+        <div class="bucket-tabs" id="bucket-tabs"></div>
+    </div>
+
+    <div class="filter-bar">
+        <div class="search-wrap">
+            <svg viewBox="0 0 16 16" fill="none" stroke="#bbb" stroke-width="1.5"><circle cx="6.5" cy="6.5" r="4"/><path d="M11 11l3 3"/></svg>
+            <input class="search-input" id="search-input" placeholder="파일명 검색..." oninput="handleSearch()" />
+        </div>
+        <div class="view-toggle">
+            <button class="view-btn active" id="grid-btn" onclick="setView('grid')">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+            </button>
+            <button class="view-btn" id="list-btn" onclick="setView('list')">
+                <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M1 4h14M1 8h14M1 12h14"/></svg>
+            </button>
+        </div>
+        <span class="count-text" id="count-text">불러오는 중...</span>
+    </div>
+
+    <div class="image-grid" id="image-grid">
+        <div class="loading" style="grid-column:1/-1">불러오는 중...</div>
+    </div>
+    <div class="image-list" id="image-list"></div>
+    <div class="pagination" id="pagination"></div>
+</div>
+
+<!-- 상세 모달 -->
+<div class="modal-overlay" id="detail-modal">
+    <div class="modal">
+        <div class="modal-header">
+            <span class="modal-title" id="modal-filename">-</span>
+            <button class="modal-close" onclick="closeModal()">✕</button>
+        </div>
+        <div class="modal-img-wrap">
+            <img id="modal-img" src="" alt="" />
+        </div>
+        <div class="meta-grid">
+            <div class="meta-item"><div class="meta-label">이미지 ID / Key</div><div class="meta-value" id="modal-id">-</div></div>
+            <div class="meta-item"><div class="meta-label">파일 크기</div><div class="meta-value" id="modal-size">-</div></div>
+            <div class="meta-item"><div class="meta-label">MIME 타입</div><div class="meta-value" id="modal-mime">-</div></div>
+            <div class="meta-item"><div class="meta-label">업로드 일시</div><div class="meta-value" id="modal-date">-</div></div>
+        </div>
+        <div class="modal-footer">
+            <button class="btn-cancel" onclick="closeModal()">닫기</button>
+            <button class="btn-delete" id="modal-delete-btn" onclick="confirmDelete(currentImageId)">삭제</button>
+        </div>
+    </div>
+</div>
+
+<!-- 삭제 확인 모달 -->
+<div class="confirm-overlay" id="confirm-modal">
+    <div class="confirm-box">
+        <div class="confirm-title">삭제할까요?</div>
+        <div class="confirm-msg">삭제된 데이터는 복구할 수 없습니다.</div>
+        <div class="confirm-actions">
+            <button class="btn-cancel" onclick="closeConfirm()">취소</button>
+            <button class="btn-delete" onclick="executeDelete()">삭제</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    if (!localStorage.getItem('accessToken')) location.href = '/index.html';
+    const role = localStorage.getItem('role');
+
+    try {
+        const token = localStorage.getItem('accessToken');
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const email = payload.email || '';
+        document.getElementById('user-avatar').textContent = email.substring(0, 2).toUpperCase();
+        document.getElementById('user-name').textContent = email.split('@')[0];
+    } catch(e) {}
+
+    function formatBytes(bytes) {
+        if (!bytes) return '0 B';
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+    function formatDate(str) {
+        if (!str) return '-';
+        return new Date(str).toLocaleDateString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit' });
+    }
+    function getFilename(objectKey) {
+        return objectKey?.split('/').pop() || '-';
+    }
+
+    let allImages = [];
+    let filtered = [];
+    let currentPage = 1;
+    const pageSize = 20;
+    let currentView = 'grid';
+    let currentImageId = null;
+    let deleteTargetId = null;
+    const buckets = ['images', 'thumbnails'];
+    let selectedBuckets = new Set(['images']);
+
+    // ── 버킷 탭 초기화 ───────────────────────────────────────
+    function initTabs() {
+        const tabsEl = document.getElementById('bucket-tabs');
+        tabsEl.innerHTML = buckets.map(b => `
+    <button class="bucket-tab ${selectedBuckets.has(b) ? 'active' : ''}"
+            id="tab-${b}" onclick="toggleTab('${b}')">${b}</button>
+  `).join('');
+    }
+
+    async function toggleTab(bucket) {
+        if (selectedBuckets.has(bucket)) {
+            if (selectedBuckets.size === 1) return; // 최소 1개는 선택 유지
+            selectedBuckets.delete(bucket);
+        } else {
+            selectedBuckets.add(bucket);
+        }
+        document.getElementById('tab-' + bucket).classList.toggle('active', selectedBuckets.has(bucket));
+        document.getElementById('search-input').value = '';
+        currentPage = 1;
+        await loadSelectedBuckets();
+    }
+
+    async function loadSelectedBuckets() {
+        document.getElementById('image-grid').innerHTML = '<div class="loading" style="grid-column:1/-1">불러오는 중...</div>';
+
+        const results = [];
+        for (const bucket of selectedBuckets) {
+            if (bucket === 'images') {
+                const res = await apiFetch('/api/v1/images?limit=200');
+                if (!res) continue;
+                const data = await res.json();
+                results.push(...(data.images || []).map(img => ({ ...img, isBucketObject: false })));
+            } else {
+                const res = await apiFetch(`/api/v1/buckets/${bucket}/objects?limit=200`);
+                if (!res) continue;
+                const data = await res.json();
+                results.push(...(data.objects || []).map(obj => ({
+                    id: obj.key,
+                    objectKey: obj.key,
+                    bucket: obj.bucket,
+                    size: obj.size,
+                    contentType: obj.contentType,
+                    createdAt: obj.createdAt,
+                    isBucketObject: true
+                })));
+            }
+        }
+
+        allImages = results;
+        filtered = [...allImages];
+        renderPage();
+    }
+
+    // ── images 버킷 (image-service 경유) ─────────────────────
+    async function loadImages() {
+        document.getElementById('image-grid').innerHTML = '<div class="loading" style="grid-column:1/-1">불러오는 중...</div>';
+        try {
+            const res = await apiFetch('/api/v1/images?limit=200');
+            if (!res) return;
+            const data = await res.json();
+            allImages = (data.images || []).map(img => ({ ...img, isBucketObject: false }));
+            filtered = [...allImages];
+            renderPage();
+        } catch(e) {
+            document.getElementById('image-grid').innerHTML = '<div class="empty" style="grid-column:1/-1">불러오기 실패</div>';
+        }
+    }
+
+    // ── 그 외 버킷 (mini-s3 직접) ────────────────────────────
+    async function loadBucketObjects(bucket) {
+        document.getElementById('image-grid').innerHTML = '<div class="loading" style="grid-column:1/-1">불러오는 중...</div>';
+        try {
+            const res = await apiFetch(`/api/v1/buckets/${bucket}/objects?limit=200`);
+            if (!res) return;
+            const data = await res.json();
+            allImages = (data.objects || []).map(obj => ({
+                id: obj.key,
+                objectKey: obj.key,
+                bucket: obj.bucket,
+                size: obj.size,
+                contentType: obj.contentType,
+                createdAt: obj.createdAt,
+                isBucketObject: true
+            }));
+            filtered = [...allImages];
+            renderPage();
+        } catch(e) {
+            document.getElementById('image-grid').innerHTML = '<div class="empty" style="grid-column:1/-1">불러오기 실패</div>';
+        }
+    }
+
+    function handleSearch() {
+        const q = document.getElementById('search-input').value.trim().toLowerCase();
+        filtered = q
+            ? allImages.filter(img => getFilename(img.objectKey).toLowerCase().includes(q))
+            : [...allImages];
+        currentPage = 1;
+        renderPage();
+    }
+
+    function setView(view) {
+        currentView = view;
+        document.getElementById('grid-btn').classList.toggle('active', view === 'grid');
+        document.getElementById('list-btn').classList.toggle('active', view === 'list');
+        document.getElementById('image-grid').style.display = view === 'grid' ? 'grid' : 'none';
+        document.getElementById('image-list').style.display = view === 'list' ? 'flex' : 'none';
+        renderPage();
+    }
+
+    function renderPage() {
+        const total = filtered.length;
+        const totalPages = Math.ceil(total / pageSize);
+        const start = (currentPage - 1) * pageSize;
+        const items = filtered.slice(start, start + pageSize);
+
+        document.getElementById('count-text').textContent = `총 ${total}개`;
+
+        if (currentView === 'grid') renderGrid(items);
+        else renderList(items);
+        renderPagination(totalPages);
+    }
+
+    function thumbHtml(img) {
+        let url;
+        if (img.isBucketObject) {
+            // mini-s3 직접 접근: key에서 bucket 제거
+            const key = img.objectKey.startsWith(img.bucket + '/')
+                ? img.objectKey.substring(img.bucket.length + 1)
+                : img.objectKey;
+            url = `/api/v1/proxy/${img.bucket}/${key}`;
+        } else {
+            url = `/api/v1/proxy/images/${img.id}/variants/thumb_xs.png`;
+        }
+        return `<img src="${url}" alt="" style="width:100%;height:100%;object-fit:cover;" loading="lazy" onerror="this.style.display='none'" />`;
+    }
+
+    function renderGrid(items) {
+        const grid = document.getElementById('image-grid');
+        if (!items.length) {
+            grid.innerHTML = '<div class="empty" style="grid-column:1/-1">이미지가 없습니다</div>';
+            return;
+        }
+        grid.innerHTML = items.map(img => {
+            const filename = getFilename(img.objectKey);
+            return `
+        <div class="image-card" onclick="openDetail('${img.id}')">
+          <div class="thumb-wrap">
+            ${thumbHtml(img)}
+            <div class="card-actions">
+              <button class="action-btn view-btn-action" onclick="openDetail('${img.id}'); event.stopPropagation();">
+                <svg viewBox="0 0 14 14" fill="none" stroke="#333" stroke-width="1.5" width="14" height="14"><circle cx="7" cy="7" r="4"/><circle cx="7" cy="7" r="1.5" fill="#333" stroke="none"/></svg>
+              </button>
+              <button class="action-btn delete-btn-action" onclick="confirmDelete('${img.id}'); event.stopPropagation();">
+                <svg viewBox="0 0 14 14" fill="none" stroke="#a32d2d" stroke-width="1.5" width="14" height="14"><path d="M2 3h10M5 3V2h4v1M4 3v8h6V3"/></svg>
+              </button>
+            </div>
+          </div>
+          <div class="card-info">
+            <div class="card-name" title="${filename}">${filename}</div>
+            <div class="card-meta">
+              <span>${formatBytes(img.size)}</span>
+              <span class="badge">${img.contentType?.split('/')[1] || '-'}</span>
+            </div>
+          </div>
+        </div>
+      `;
+        }).join('');
+    }
+
+    function renderList(items) {
+        const list = document.getElementById('image-list');
+        if (!items.length) {
+            list.innerHTML = '<div class="empty">이미지가 없습니다</div>';
+            return;
+        }
+        list.innerHTML = items.map(img => {
+            const filename = getFilename(img.objectKey);
+            return `
+        <div class="list-item">
+          <div class="list-thumb">${thumbHtml(img)}</div>
+          <span class="list-name" title="${filename}">${filename}</span>
+          <span class="list-size">${formatBytes(img.size)}</span>
+          <span class="list-date">${formatDate(img.createdAt)}</span>
+          <div class="list-actions">
+            <button class="list-action-btn" onclick="openDetail('${img.id}')">상세</button>
+            <button class="list-action-btn del" onclick="confirmDelete('${img.id}')">삭제</button>
+          </div>
+        </div>
+      `;
+        }).join('');
+    }
+
+    function renderPagination(totalPages) {
+        const pg = document.getElementById('pagination');
+        if (totalPages <= 1) { pg.innerHTML = ''; return; }
+        let html = `<button class="page-btn" onclick="goPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>이전</button>`;
+        for (let i = 1; i <= totalPages; i++) {
+            if (i === 1 || i === totalPages || Math.abs(i - currentPage) <= 2) {
+                html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+            } else if (Math.abs(i - currentPage) === 3) {
+                html += `<span style="padding:6px 4px;color:#bbb;font-size:13px;">...</span>`;
+            }
+        }
+        html += `<button class="page-btn" onclick="goPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>다음</button>`;
+        pg.innerHTML = html;
+    }
+
+    function goPage(page) {
+        const totalPages = Math.ceil(filtered.length / pageSize);
+        if (page < 1 || page > totalPages) return;
+        currentPage = page;
+        renderPage();
+        window.scrollTo(0, 0);
+    }
+
+    function openDetail(imageId) {
+        const img = allImages.find(i => i.id === imageId);
+        if (!img) return;
+        currentImageId = imageId;
+        const filename = getFilename(img.objectKey);
+
+        let previewUrl;
+        if (img.isBucketObject) {
+            const key = img.objectKey.startsWith(img.bucket + '/')
+                ? img.objectKey.substring(img.bucket.length + 1)
+                : img.objectKey;
+            previewUrl = `/api/v1/proxy/${img.bucket}/${key}`;
+            // 버킷 오브젝트는 삭제 버튼 숨김 (image-service 통해서만 삭제)
+            document.getElementById('modal-delete-btn').style.display = 'none';
+        } else {
+            previewUrl = `/api/v1/proxy/images/${img.id}/variants/thumb_md.png`;
+            document.getElementById('modal-delete-btn').style.display = '';
+        }
+
+        document.getElementById('modal-filename').textContent = filename;
+        document.getElementById('modal-id').textContent = img.id;
+        document.getElementById('modal-size').textContent = formatBytes(img.size);
+        document.getElementById('modal-mime').textContent = img.contentType || '-';
+        document.getElementById('modal-date').textContent = formatDate(img.createdAt);
+        document.getElementById('modal-img').src = previewUrl;
+        document.getElementById('detail-modal').classList.add('open');
+    }
+
+    function closeModal() {
+        document.getElementById('detail-modal').classList.remove('open');
+        currentImageId = null;
+    }
+
+    function confirmDelete(imageId) {
+        if (localStorage.getItem('role') === 'VIEWER') {
+            alert('열람 전용 계정은 삭제할 수 없습니다.');
+            return;
+        }
+        deleteTargetId = imageId;
+        closeModal();
+        document.getElementById('confirm-modal').classList.add('open');
+    }
+
+    function closeConfirm() {
+        document.getElementById('confirm-modal').classList.remove('open');
+        deleteTargetId = null;
+    }
+
+    async function executeDelete() {
+        if (!deleteTargetId) return;
+        try {
+            const res = await apiFetch(`/api/v1/images/${deleteTargetId}`, { method: 'DELETE' });
+            if (!res) return;
+            allImages = allImages.filter(i => i.id !== deleteTargetId);
+            filtered = filtered.filter(i => i.id !== deleteTargetId);
+            renderPage();
+        } catch(e) {
+            alert('삭제 중 오류가 발생했습니다');
+        } finally {
+            closeConfirm();
+        }
+    }
+
+    document.getElementById('detail-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeModal();
+    });
+    document.getElementById('confirm-modal').addEventListener('click', e => {
+        if (e.target === e.currentTarget) closeConfirm();
+    });
+
+    initTabs();
+    loadSelectedBuckets();
+</script>
+</body>
+</html>

@@ -1,0 +1,43 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ministorage.mini_s3.mapper.SignedUrlMapper">
+
+    <resultMap id="signedUrlResultMap" type="com.ministorage.mini_s3.domain.SignedUrl">
+        <id     property="id"        column="id"/>
+        <result property="token"     column="token"/>
+        <result property="bucket"    column="bucket"/>
+        <result property="key"       column="key"/>
+        <result property="method"    column="method"/>
+        <result property="expiresAt" column="expires_at"/>
+        <result property="createdAt" column="created_at"/>
+    </resultMap>
+
+    <insert id="insert" parameterType="com.ministorage.mini_s3.domain.SignedUrl">
+        INSERT INTO signed_urls (id, token, bucket, key, method, expires_at)
+        VALUES (
+                   gen_random_uuid(),
+                   #{token},
+                   #{bucket},
+                   #{key},
+                   #{method},
+                   #{expiresAt}
+               )
+    </insert>
+
+    <select id="findByToken" resultMap="signedUrlResultMap">
+        SELECT id, token, bucket, key, method, expires_at, created_at
+        FROM signed_urls
+        WHERE token = #{token}
+    </select>
+
+    <delete id="deleteByToken">
+        DELETE FROM signed_urls WHERE token = #{token}
+    </delete>
+
+    <delete id="deleteExpired">
+        DELETE FROM signed_urls WHERE expires_at &lt; now()
+    </delete>
+
+</mapper>

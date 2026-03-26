@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="com.ministorage.admin_dashboard.mapper.AuditLogMapper">
+
+    <select id="findRecent" resultType="com.ministorage.admin_dashboard.domain.AuditLog">
+        SELECT id,
+               admin_id,
+            action,
+            target,
+            CASE
+                WHEN ip LIKE '%.%' THEN
+                    split_part(ip, '.', 1) || '.' ||
+                    split_part(ip, '.', 2) || '.' ||
+                    split_part(ip, '.', 3) || '.**'
+                WHEN ip LIKE '%:%' THEN
+                    split_part(ip, ':', 1) || ':' ||
+                    split_part(ip, ':', 2) || ':' ||
+                    split_part(ip, ':', 3) || ':' ||
+                    split_part(ip, ':', 4) || ':****'
+                ELSE ip
+            END AS ip,
+            created_at
+        FROM audit_logs
+        ORDER BY created_at DESC
+        LIMIT #{limit}
+    </select>
+
+    <insert id="insert" parameterType="com.ministorage.admin_dashboard.domain.AuditLog">
+        INSERT INTO audit_logs (admin_id, action, target, ip)
+        VALUES (#{adminId}, #{action}, #{target}, #{ip})
+    </insert>
+
+</mapper>

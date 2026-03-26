@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>업로드 - mini-storage admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <script src="/js/auth.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', sans-serif; background: #f5f5f3; display: flex; min-height: 100vh; }
+
+        /* 사이드바 - dashboard.html과 동일 */
+        .sidebar { width: 220px; background: #fff; border-right: 1px solid #e8e8e6; padding: 1.5rem 1rem; flex-shrink: 0; display: flex; flex-direction: column; position: fixed; top: 0; left: 0; height: 100vh; }
+        .sidebar-logo { display: flex; align-items: center; gap: 8px; padding: 0 0.5rem; margin-bottom: 2rem; }
+        .logo-icon { width: 30px; height: 30px; background: #111; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .logo-icon svg { width: 15px; height: 15px; }
+        .logo-text { font-size: 14px; font-weight: 500; color: #111; letter-spacing: -0.3px; }
+        .logo-sub { font-size: 11px; color: #999; }
+        .nav-label { font-size: 11px; color: #bbb; letter-spacing: 0.5px; text-transform: uppercase; padding: 0 0.5rem; margin-bottom: 0.5rem; }
+        .nav-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 7px; font-size: 14px; color: #555; cursor: pointer; margin-bottom: 2px; text-decoration: none; }
+        .nav-item:hover { background: #f5f5f3; }
+        .nav-item.active { background: #111; color: #fff; }
+        .nav-item svg { width: 16px; height: 16px; flex-shrink: 0; }
+        .nav-spacer { flex: 1; }
+        .nav-user { display: flex; align-items: center; gap: 8px; padding: 8px 10px; }
+        .avatar { width: 28px; height: 28px; background: #e8e8e6; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; color: #555; flex-shrink: 0; }
+        .user-name { font-size: 13px; font-weight: 500; color: #111; }
+        .user-role { font-size: 11px; color: #999; }
+        .logout-btn { width: 100%; margin-top: 0.5rem; padding: 8px 10px; font-size: 13px; color: #999; background: none; border: none; cursor: pointer; text-align: left; font-family: inherit; border-radius: 7px; }
+        .logout-btn:hover { background: #f5f5f3; color: #555; }
+
+        /* 메인 */
+        .main { margin-left: 220px; flex: 1; padding: 2rem; max-width: 860px; }
+        .page-header { margin-bottom: 1.75rem; }
+        .page-header h1 { font-size: 20px; font-weight: 500; color: #111; letter-spacing: -0.4px; }
+        .page-header p { font-size: 13px; color: #999; margin-top: 3px; }
+
+        /* 섹션 */
+        .section { background: #fff; border: 1px solid #e8e8e6; border-radius: 10px; padding: 1.5rem; margin-bottom: 1.25rem; }
+        .section-title { font-size: 14px; font-weight: 500; color: #111; margin-bottom: 1.25rem; }
+
+        /* 드롭존 */
+        .dropzone { border: 2px dashed #e0e0de; border-radius: 10px; padding: 3rem 2rem; text-align: center; cursor: pointer; transition: border-color 0.15s, background 0.15s; }
+        .dropzone:hover, .dropzone.drag { border-color: #aaa; background: #fafaf8; }
+        .dropzone-icon { width: 44px; height: 44px; margin: 0 auto 1rem; background: #f0f0ee; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
+        .dropzone-icon svg { width: 22px; height: 22px; }
+        .dropzone-text { font-size: 14px; font-weight: 500; color: #333; margin-bottom: 4px; }
+        .dropzone-sub { font-size: 13px; color: #bbb; }
+        input[type="file"] { display: none; }
+
+        /* 미리보기 */
+        .preview-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-top: 1.25rem; }
+        .preview-item { border: 1px solid #e8e8e6; border-radius: 8px; overflow: hidden; position: relative; }
+        .preview-thumb { height: 90px; background: #f0f0ee; overflow: hidden; }
+        .preview-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .preview-info { padding: 8px 10px; }
+        .preview-name { font-size: 12px; color: #333; font-weight: 500; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .preview-size { font-size: 11px; color: #bbb; margin-top: 2px; }
+        .remove-btn { position: absolute; top: 5px; right: 5px; width: 20px; height: 20px; background: rgba(0,0,0,0.45); border-radius: 50%; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 0; }
+        .remove-btn svg { width: 10px; height: 10px; }
+
+        /* 업로드 버튼 영역 */
+        .upload-actions { display: flex; align-items: center; justify-content: space-between; margin-top: 1.25rem; }
+        .status-text { font-size: 13px; color: #999; }
+        .btn-upload { padding: 10px 24px; font-size: 14px; font-weight: 500; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; }
+        .btn-upload:hover { background: #333; }
+        .btn-upload:disabled { background: #ccc; cursor: not-allowed; }
+
+        /* 프로그레스 */
+        .progress-wrap { margin-top: 1rem; display: none; }
+        .progress-label { display: flex; justify-content: space-between; font-size: 12px; color: #999; margin-bottom: 6px; }
+        .progress-bar { height: 4px; background: #f0f0ee; border-radius: 2px; overflow: hidden; }
+        .progress-fill { height: 100%; background: #111; border-radius: 2px; transition: width 0.3s; width: 0%; }
+
+        /* 결과 */
+        .result-list { display: flex; flex-direction: column; gap: 8px; }
+        .result-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e8e8e6; border-radius: 8px; }
+        .result-icon { width: 28px; height: 28px; border-radius: 6px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .result-icon.success { background: #eaf3de; }
+        .result-icon.error { background: #fcebeb; }
+        .result-name { font-size: 13px; color: #333; flex: 1; min-width: 0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .result-badge { font-size: 11px; padding: 3px 8px; border-radius: 4px; flex-shrink: 0; }
+        .result-badge.success { background: #eaf3de; color: #3b6d11; }
+        .result-badge.error { background: #fcebeb; color: #a32d2d; }
+        .result-msg { font-size: 11px; color: #bbb; flex-shrink: 0; max-width: 200px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .empty { text-align: center; padding: 2rem; color: #bbb; font-size: 13px; }
+    </style>
+</head>
+<body>
+<div class="sidebar">
+    <div class="sidebar-logo">
+        <div class="logo-icon">
+            <svg viewBox="0 0 18 18" fill="none"><rect x="2" y="2" width="6" height="6" rx="1.5" fill="white"/><rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.5"/><rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.5"/><rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.3"/></svg>
+        </div>
+        <div>
+            <div class="logo-text">mini-storage</div>
+            <div class="logo-sub">admin console</div>
+        </div>
+    </div>
+    <div class="nav-label">메뉴</div>
+    <a href="/dashboard.html" class="nav-item">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="1" width="6" height="6" rx="1"/><rect x="9" y="1" width="6" height="6" rx="1"/><rect x="1" y="9" width="6" height="6" rx="1"/><rect x="9" y="9" width="6" height="6" rx="1"/></svg>
+        대시보드
+    </a>
+    <a href="/logs.html" class="nav-item">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M2 4h12M2 8h12M2 12h8"/></svg>
+        접속 로그
+    </a>
+    <a href="/images.html" class="nav-item">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="1" y="3" width="14" height="10" rx="1.5"/><circle cx="5.5" cy="7.5" r="1.5"/><path d="M15 11l-4-4-6 6"/></svg>
+        이미지 관리
+    </a>
+    <a href="/upload.html" class="nav-item active">
+        <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M8 11V3M5 6l3-3 3 3"/><path d="M2 13h12"/></svg>
+        업로드
+    </a>
+    <div class="nav-spacer"></div>
+    <div class="nav-user">
+        <div class="avatar" id="user-avatar">AD</div>
+        <div>
+            <div class="user-name" id="user-name">-</div>
+            <div class="user-role">관리자</div>
+        </div>
+    </div>
+    <button class="logout-btn" onclick="logout()">로그아웃</button>
+</div>
+
+<div class="main">
+    <div class="page-header">
+        <h1>이미지 업로드</h1>
+        <p>이미지를 업로드하면 썸네일(xs/sm/md/lg)이 자동으로 생성됩니다</p>
+    </div>
+
+    <div class="section">
+        <div class="section-title">파일 선택</div>
+        <div class="dropzone" id="dropzone" onclick="document.getElementById('file-input').click()">
+            <div class="dropzone-icon">
+                <svg viewBox="0 0 22 22" fill="none" stroke="#aaa" stroke-width="1.5">
+                    <path d="M11 14V4M8 7l3-3 3 3"/>
+                    <path d="M3 15v3a1 1 0 001 1h14a1 1 0 001-1v-3"/>
+                </svg>
+            </div>
+            <div class="dropzone-text">파일을 드래그하거나 클릭하여 선택</div>
+            <div class="dropzone-sub">JPG, PNG, GIF, WEBP · 최대 20MB · 여러 파일 동시 업로드 가능</div>
+        </div>
+        <input type="file" id="file-input" accept="image/jpeg,image/png,image/gif,image/webp" multiple />
+
+        <div class="preview-grid" id="preview-grid"></div>
+
+        <div class="upload-actions" id="upload-actions" style="display:none">
+            <span class="status-text" id="status-text"></span>
+            <button class="btn-upload" id="upload-btn" onclick="startUpload()">업로드 시작</button>
+        </div>
+
+        <div class="progress-wrap" id="progress-wrap">
+            <div class="progress-label">
+                <span id="progress-text">업로드 중...</span>
+                <span id="progress-pct">0%</span>
+            </div>
+            <div class="progress-bar"><div class="progress-fill" id="progress-fill"></div></div>
+        </div>
+    </div>
+
+    <div class="section" id="result-section" style="display:none">
+        <div class="section-title">업로드 결과</div>
+        <div class="result-list" id="result-list"></div>
+    </div>
+</div>
+
+<script>
+    if (!localStorage.getItem('accessToken')) location.href = '/index.html';
+    const role = localStorage.getItem('role');
+
+    // 유저 정보
+    try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        const email = payload.email || '';
+        document.getElementById('user-avatar').textContent = email.substring(0, 2).toUpperCase();
+        document.getElementById('user-name').textContent = email.split('@')[0];
+    } catch(e) {}
+
+    let selectedFiles = [];
+
+    function formatBytes(bytes) {
+        if (bytes < 1024) return bytes + ' B';
+        if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
+        return (bytes / 1024 / 1024).toFixed(1) + ' MB';
+    }
+
+    function renderPreviews() {
+        const grid = document.getElementById('preview-grid');
+        const actions = document.getElementById('upload-actions');
+        const statusText = document.getElementById('status-text');
+
+        if (selectedFiles.length === 0) {
+            grid.innerHTML = '';
+            actions.style.display = 'none';
+            return;
+        }
+
+        const totalSize = selectedFiles.reduce((sum, f) => sum + f.size, 0);
+        statusText.textContent = `${selectedFiles.length}개 파일 선택됨 · ${formatBytes(totalSize)}`;
+        actions.style.display = 'flex';
+
+        grid.innerHTML = selectedFiles.map((file, i) => {
+            const url = URL.createObjectURL(file);
+            return `
+          <div class="preview-item">
+            <div class="preview-thumb">
+              <img src="${url}" alt="${file.name}" />
+            </div>
+            <div class="preview-info">
+              <div class="preview-name" title="${file.name}">${file.name}</div>
+              <div class="preview-size">${formatBytes(file.size)}</div>
+            </div>
+            <button class="remove-btn" onclick="removeFile(${i})">
+              <svg viewBox="0 0 10 10" fill="none" stroke="white" stroke-width="1.5">
+                <path d="M2 2l6 6M8 2l-6 6"/>
+              </svg>
+            </button>
+          </div>
+        `;
+        }).join('');
+    }
+
+    function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        renderPreviews();
+    }
+
+    function addFiles(files) {
+        const allowed = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        for (const file of files) {
+            if (!allowed.includes(file.type)) continue;
+            if (file.size > 20 * 1024 * 1024) continue;
+            if (!selectedFiles.find(f => f.name === file.name && f.size === file.size)) {
+                selectedFiles.push(file);
+            }
+        }
+        renderPreviews();
+    }
+
+    // 파일 input
+    document.getElementById('file-input').addEventListener('change', e => {
+        addFiles(e.target.files);
+        e.target.value = '';
+    });
+
+    // 드래그앤드롭
+    const dropzone = document.getElementById('dropzone');
+    dropzone.addEventListener('dragover', e => { e.preventDefault(); dropzone.classList.add('drag'); });
+    dropzone.addEventListener('dragleave', () => dropzone.classList.remove('drag'));
+    dropzone.addEventListener('drop', e => {
+        e.preventDefault();
+        dropzone.classList.remove('drag');
+        addFiles(e.dataTransfer.files);
+    });
+
+    async function startUpload() {
+        if (localStorage.getItem('role') === 'VIEWER') {
+            alert('열람 전용 계정은 업로드할 수 없습니다.');
+            return;
+        }
+        if (selectedFiles.length === 0) return;
+
+        const btn = document.getElementById('upload-btn');
+        const progressWrap = document.getElementById('progress-wrap');
+        const progressFill = document.getElementById('progress-fill');
+        const progressText = document.getElementById('progress-text');
+        const progressPct = document.getElementById('progress-pct');
+        const resultSection = document.getElementById('result-section');
+        const resultList = document.getElementById('result-list');
+
+        btn.disabled = true;
+        progressWrap.style.display = 'block';
+        resultSection.style.display = 'block';
+        resultList.innerHTML = '';
+
+        const results = [];
+        for (let i = 0; i < selectedFiles.length; i++) {
+            const file = selectedFiles[i];
+            const pct = Math.round((i / selectedFiles.length) * 100);
+            progressFill.style.width = pct + '%';
+            progressPct.textContent = pct + '%';
+            progressText.textContent = `업로드 중... (${i + 1}/${selectedFiles.length})`;
+
+            try {
+                const formData = new FormData();
+                formData.append('file', file);
+
+                const res = await apiFetch('/api/v1/images', {
+                    method: 'POST',
+                    body: formData
+                });
+                if (!res) return;
+
+                if (res.status === 401) { logout(); return; }
+
+                if (res.ok) {
+                    const data = await res.json();
+                    results.push({ name: file.name, success: true, id: data.imageId });
+                } else {
+                    const err = await res.json().catch(() => ({}));
+                    results.push({ name: file.name, success: false, msg: err.message || '업로드 실패' });
+                }
+            } catch (e) {
+                results.push({ name: file.name, success: false, msg: '네트워크 오류' });
+            }
+
+            // 결과 즉시 렌더링
+            resultList.innerHTML = results.map(r => `
+          <div class="result-item">
+            <div class="result-icon ${r.success ? 'success' : 'error'}">
+              ${r.success
+                ? `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#3b6d11" stroke-width="1.5"><path d="M3 8l4 4 6-6"/></svg>`
+                : `<svg viewBox="0 0 16 16" width="16" height="16" fill="none" stroke="#a32d2d" stroke-width="1.5"><path d="M4 4l8 8M12 4l-8 8"/></svg>`
+            }
+            </div>
+            <span class="result-name" title="${r.name}">${r.name}</span>
+            ${r.msg ? `<span class="result-msg">${r.msg}</span>` : ''}
+            <span class="result-badge ${r.success ? 'success' : 'error'}">${r.success ? '완료' : '실패'}</span>
+          </div>
+        `).join('');
+        }
+
+        progressFill.style.width = '100%';
+        progressPct.textContent = '100%';
+        progressText.textContent = '업로드 완료';
+
+        const successCount = results.filter(r => r.success).length;
+        document.getElementById('status-text').textContent =
+            `완료: ${successCount}개 성공 · ${results.length - successCount}개 실패`;
+
+        selectedFiles = [];
+        btn.disabled = false;
+        setTimeout(() => { progressWrap.style.display = 'none'; }, 1500);
+    }
+</script>
+</body>
+</html>

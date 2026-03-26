@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>mini-storage admin</title>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body { font-family: 'DM Sans', sans-serif; background: #f5f5f3; display: flex; align-items: center; justify-content: center; min-height: 100vh; }
+        .card { background: #fff; border: 1px solid #e8e8e6; border-radius: 12px; padding: 2.5rem; width: 100%; max-width: 400px; }
+        .logo { display: flex; align-items: center; gap: 10px; margin-bottom: 2rem; }
+        .logo-icon { width: 36px; height: 36px; background: #111; border-radius: 8px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+        .logo-icon svg { width: 18px; height: 18px; }
+        .logo-text { font-size: 15px; font-weight: 500; color: #111; letter-spacing: -0.3px; }
+        .logo-sub { font-size: 12px; color: #888; }
+        h1 { font-size: 22px; font-weight: 500; color: #111; letter-spacing: -0.5px; margin-bottom: 0.4rem; }
+        .subtitle { font-size: 14px; color: #888; margin-bottom: 2rem; }
+        .field { margin-bottom: 1.25rem; }
+        label { display: block; font-size: 13px; color: #666; margin-bottom: 6px; }
+        input { width: 100%; padding: 10px 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; outline: none; font-family: inherit; color: #111; }
+        input:focus { border-color: #999; box-shadow: 0 0 0 3px rgba(0,0,0,0.05); }
+        .btn { width: 100%; padding: 11px; font-size: 14px; font-weight: 500; background: #111; color: #fff; border: none; border-radius: 8px; cursor: pointer; font-family: inherit; letter-spacing: -0.2px; }
+        .btn:hover { background: #333; }
+        .btn:disabled { background: #999; cursor: not-allowed; }
+        .error { font-size: 13px; color: #d85a30; margin-top: 0.75rem; display: none; }
+        hr { border: none; border-top: 1px solid #f0f0ee; margin: 1.75rem 0; }
+        .footer { font-size: 12px; color: #bbb; text-align: center; }
+    </style>
+</head>
+<body>
+<div class="card">
+    <div class="logo">
+        <div class="logo-icon">
+            <svg viewBox="0 0 18 18" fill="none" xmlns="http://www.w3.org/2000/svg">
+                <rect x="2" y="2" width="6" height="6" rx="1.5" fill="white"/>
+                <rect x="10" y="2" width="6" height="6" rx="1.5" fill="white" opacity="0.5"/>
+                <rect x="2" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.5"/>
+                <rect x="10" y="10" width="6" height="6" rx="1.5" fill="white" opacity="0.3"/>
+            </svg>
+        </div>
+        <div>
+            <div class="logo-text">mini-storage</div>
+            <div class="logo-sub">admin console</div>
+        </div>
+    </div>
+    <h1>로그인</h1>
+    <p class="subtitle">관리자 계정으로 로그인하세요</p>
+    <div class="field">
+        <label for="email">이메일</label>
+        <input type="email" id="email" placeholder="admin@example.com" />
+    </div>
+    <div class="field">
+        <label for="password">비밀번호</label>
+        <input type="password" id="password" placeholder="••••••••" />
+    </div>
+    <p class="error" id="error-msg"></p>
+    <button class="btn" id="login-btn" onclick="handleLogin()">로그인</button>
+    <button class="btn-viewer" id="viewer-btn" onclick="handleViewerLogin()" style="width:100%;padding:11px;font-size:14px;font-weight:500;background:#fff;color:#555;border:1px solid #ddd;border-radius:8px;cursor:pointer;font-family:inherit;margin-top:8px;">
+        Viewer로 둘러보기
+    </button>
+    <hr>
+    <p class="footer">mini-storage v1.0.0</p>
+</div>
+
+<script>
+    const API_BASE = '';  // 같은 오리진이라 비워도 됨
+
+    // 이미 로그인 되어있으면 대시보드로
+    if (localStorage.getItem('accessToken')) {
+        location.href = '/dashboard.html';
+    }
+
+    async function handleLogin() {
+        const email = document.getElementById('email').value.trim();
+        const password = document.getElementById('password').value;
+        const btn = document.getElementById('login-btn');
+        const errMsg = document.getElementById('error-msg');
+
+        if (!email || !password) {
+            showError('이메일과 비밀번호를 입력해주세요');
+            return;
+        }
+
+        btn.disabled = true;
+        btn.textContent = '로그인 중...';
+        errMsg.style.display = 'none';
+
+        try {
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email, password })
+            });
+
+            const data = await res.json();
+
+            if (!res.ok) {
+                showError(data.message || '로그인에 실패했습니다');
+                return;
+            }
+
+            localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
+            localStorage.setItem('role', data.role);
+            location.href = '/dashboard.html';
+        } catch (e) {
+            showError('서버에 연결할 수 없습니다');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = '로그인';
+        }
+    }
+
+    // viewer login
+    async function handleViewerLogin() {
+        const btn = document.getElementById('viewer-btn');
+        btn.disabled = true;
+        btn.textContent = '로그인 중...';
+        try {
+            const res = await fetch('/api/v1/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ email: 'viewer@example.com', password: 'viewer1234' })
+            });
+            const data = await res.json();
+            if (!res.ok) { showError(data.message || '로그인 실패'); return; }
+            localStorage.setItem('accessToken', data.accessToken);
+            localStorage.setItem('refreshToken', data.refreshToken);
+            localStorage.setItem('role', data.role);
+            location.href = '/dashboard.html';
+        } catch(e) {
+            showError('서버에 연결할 수 없습니다');
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Viewer로 둘러보기';
+        }
+    }
+
+    function showError(msg) {
+        const el = document.getElementById('error-msg');
+        el.textContent = msg;
+        el.style.display = 'block';
+    }
+
+    // Enter 키로 로그인
+    document.addEventListener('keydown', e => {
+        if (e.key === 'Enter') handleLogin();
+    });
+</script>
+</body>
+</html>
